@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embed Proxy</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: black;
+            overflow: hidden;
+        }
+        iframe {
+            border: none;
+            max-width: 100vw;
+            max-height: 100vh;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="embedFrame"></iframe>
+    <script>
+        const path = window.location.pathname.substring(1);
+        if (path) {
+            document.getElementById('embedFrame').src = `https://${path}`;
+        } else {
+            document.body.innerHTML = '<p style="color: white; font-family: sans-serif;">No URL provided. Use / followed by the embed domain and path, e.g., /www.youtube-nocookie.com/embed/VIDEO_ID</p>';
+        }
+    </script>
+</body>
+</html>
