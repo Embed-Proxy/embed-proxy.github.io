@@ -37,7 +37,7 @@
         fullPath = 'www.' + fullPath;
         if (fullPath) {
             const iframe = document.getElementById('embedFrame');
-            iframe.setAttribute('allow', 'autoplay; fullscreen');
+            iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');            
             iframe.src = `https://${fullPath}`;
         } else {
             document.body.innerHTML = '<p style="color: white; font-family: sans-serif;">No URL provided. Use / followed by the embed domain and path, e.g., /www.youtube-nocookie.com/embed/VIDEO_ID?autoplay=1</p>';
