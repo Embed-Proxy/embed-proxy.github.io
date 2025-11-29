@@ -15,23 +15,32 @@
             background-color: black;
             overflow: hidden;
         }
+        #container {
+            width: min(100vw, calc(100vh * 16 / 9));
+            height: min(100vh, calc(100vw * 9 / 16));
+        }
         iframe {
-            border: none;
-            max-width: 100vw;
-            max-height: 100vh;
             width: 100%;
             height: 100%;
+            border: none;
         }
     </style>
 </head>
 <body>
-    <iframe id="embedFrame"></iframe>
+    <div id="container">
+        <iframe id="embedFrame" allowfullscreen></iframe>
+    </div>
     <script>
-        const path = window.location.pathname.substring(1);
-        if (path) {
-            document.getElementById('embedFrame').src = `https://${path}`;
+        let fullPath = window.location.pathname.substring(1) + window.location.search;
+        fullPath = fullPath.replace(/^https?:\/\//i, '');
+        fullPath = fullPath.replace(/^www\./i, '');
+        fullPath = 'www.' + fullPath;
+        if (fullPath) {
+            const iframe = document.getElementById('embedFrame');
+            iframe.setAttribute('allow', 'autoplay; fullscreen');
+            iframe.src = `https://${fullPath}`;
         } else {
-            document.body.innerHTML = '<p style="color: white; font-family: sans-serif;">No URL provided. Use / followed by the embed domain and path, e.g., /www.youtube-nocookie.com/embed/VIDEO_ID</p>';
+            document.body.innerHTML = '<p style="color: white; font-family: sans-serif;">No URL provided. Use / followed by the embed domain and path, e.g., /www.youtube-nocookie.com/embed/VIDEO_ID?autoplay=1</p>';
         }
     </script>
 </body>
