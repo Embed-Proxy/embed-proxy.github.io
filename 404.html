@@ -1,105 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Embed Proxy</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: black;
-            overflow: hidden;
-        }
-        #container {
-            width: min(100vw, calc(100vh * 16 / 9));
-            height: min(100vh, calc(100vw * 9 / 16));
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-    </style>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Embed Proxy</title>
+<style>
+
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: black;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+#container {margin: auto;padding-bottom: 56.25%;}
+iframe {width: 100%;height: 100%;border: none;}
+.error{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.error input{width:320px;padding:10px;margin:10px 0;font-size:16px;background:#222;border:1px solid #555;color:#fff}
+.error button{padding:10px 20px;font-size:16px;background:#333;border:none;color:#fff;cursor:pointer}
+.error button:hover{background:#555}
+
+</style>
 </head>
 <body>
-    <div id="container">
-        <iframe id="embedFrame" allowfullscreen></iframe>
-    </div>
-    <script>
+<div id="container"><iframe id="embedFrame" allowfullscreen></iframe></div>
+<div id="error" class="error">
+  No URL provided. Enter a YouTube or other embeddable URL below:<br>
+  <input id="urlinput" placeholder="https://youtu.be/..." autofocus><br>
+  <button onclick="newEmbedUrl()">Load</button><br><br>
+  <a href="https://github.com/Embed-Proxy/embed-proxy.github.io" target="_blank" style="color:#888;font-size:12px;text-decoration:none;">Embed Proxy on GitHub</a>
+</div>
+
+<script>
 const iframe = document.getElementById('embedFrame');
 iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
 
 const raw = window.location.pathname.slice(1) + window.location.search;
+const inputUrl = document.getElementById('urlinput');
+function newEmbedUrl() {const val = inputUrl.value.trim();
+  if (val) location.href = '/' + val;}
 if (!raw.trim()) {
-  document.body.innerHTML = '<div class="error">No URL provided.<br>Use: /youtube.com/watch?v=abc<br>or /youtu.be/abc?t=30<br>or just /dQw4w9WgXcQ</div>';
+  document.getElementById('error').style.display = 'block';
+  inputUrl.focus();
+  inputUrl.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });
   throw new Error("No input");
 }
-
 let embedUrl = '';
-
-// Helper: detect playlist-looking IDs (PL..., VL..., UU..., FL..., or very long)
+const urlParams = new URLSearchParams(window.location.search);
 function isPlaylistID(id) {
   const clean = (id || '').split('?')[0];
   return clean.length > 15 && /^(PL|VL|UU|FL|LP|RD)/.test(clean);
 }
-
-// Extract params once
-const urlParams = new URLSearchParams(window.location.search);
-
-// ==================================================================
-// 1. Bare video ID or playlist ID (e.g. /dQw4w9WgXcQ or /PLabc123...)
-if (/^([A-Za-z0-9_-]{11}|[A-Za-z0-9_-]{15,})$/.test(raw.split('?')[0].split('&')[0])) {
-  const maybeId = raw.split('?')[0].split('&')[0];
-  const params = new URLSearchParams(urlParams);
-  params.set('autoplay', '1');
-
-  if (isPlaylistID(maybeId)) {
-    embedUrl = `https://www.youtube-nocookie.com/embed/videoseries?list=${maybeId}&${params.toString()}`;
-  } else {
-    // Handle t= → parlamentare start=
-    if (params.has('t')) {
-      const t = parseInt(params.get('t'), 10);
-      if (!isNaN(t)) params.set('start', t);
-      params.delete('t');
-    }
-    embedUrl = `https://www.youtube-nocookie.com/embed/${maybeId}?${params.toString()}`;
-  }
-  iframe.src = embedUrl;
-  console.log('Bare ID →', embedUrl);
-  throw new Error("Done");
-}
-
-// ==================================================================
-// 2. Full YouTube URL parsing
+// Full YouTube URL parsing
 let cleaned = raw
   .replace(/^(https?:\/\/)?(www\.)?/gi, '')
   .replace(/#.*$/, '');
-
 let videoId = null;
 let finalParams = new URLSearchParams();
 finalParams.set('autoplay', '1');
-
 // — youtu.be links (most common shared form)
 if (cleaned.includes('youtu.be/')) {
   videoId = cleaned.split('youtu.be/')[1].split('?')[0].split('&')[0].split('#')[0];
-  
   if (urlParams.has('t')) {
     const t = parseInt(urlParams.get('t'), 10);
     if (!isNaN(t)) finalParams.set('start', t);
   }
   if (urlParams.has('list')) finalParams.set('list', urlParams.get('list'));
-  
   // Copy any other params (rel=0, mute=1, etc.)
   for (const [k, v] of urlParams) {
     if (!['t', 'list', 'v'].includes(k)) finalParams.set(k, v);
   }
 }
-
 // — Regular youtube.com/watch
 else if (cleaned.includes('youtube.com/watch')) {
   const v = urlParams.get('v') || cleaned.split('v=')[1]?.split('&')[0];
@@ -117,18 +89,15 @@ else if (cleaned.includes('youtube.com/watch')) {
     if (!isNaN(t)) finalParams.set('start', t);
   }
 }
-
 // — Shorts
 else if (cleaned.includes('youtube.com/shorts/')) {
   videoId = cleaned.split('shorts/')[1].split('?')[0];
 }
-
 // — Direct embed path
 else if (cleaned.includes('youtube.com/embed/') || cleaned.includes('youtube-nocookie.com/embed/')) {
   const parts = cleaned.split('/embed/');
   if (parts[1]) videoId = parts[1].split('?')[0];
 }
-
 // — Playlist-only link
 else if (urlParams.has('list') && !videoId) {
   const list = urlParams.get('list');
@@ -137,13 +106,10 @@ else if (urlParams.has('list') && !videoId) {
     iframe.src = embedUrl; throw new Error("Done");
   }
 }
-
 // Copy remaining params
 for (const [k, v] of urlParams) {
   if (!['v', 't', 'list'].includes(k)) finalParams.set(k, v);
 }
-
-// ==================================================================
 // Final embed URL construction
 if (videoId || urlParams.has('list')) {
   if (!videoId && urlParams.has('list')) {
@@ -164,9 +130,9 @@ if (videoId || urlParams.has('list')) {
   }
   embedUrl = fallback;
 }
-
 iframe.src = embedUrl;
 console.log('Final embed URL →', embedUrl);
-    </script>
+
+</script>
 </body>
 </html>
