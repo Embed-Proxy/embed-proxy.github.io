@@ -134,15 +134,8 @@ if (videoId || urlParams.has('list')) {
     embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?${finalParams.toString()}`;
   }
 } else {
-  // Fallback: anything else (user gave direct embed path, twitch, etc.)
-  let fallback = 'https://' + cleaned.split('?')[0];
-  if (window.location.search) {
-    fallback += window.location.search.replace(/^[?]/, '&');
-  }
-  if (!fallback.includes('autoplay')) {
-    fallback += (fallback.includes('?') ? '&' : '?') + 'autoplay=1';
-  }
-  embedUrl = fallback;
+  // Passthrough: use the original raw input unchanged
+  embedUrl = raw;
 }
 iframe.src = embedUrl;
 console.log('Final embed URL →', embedUrl);
