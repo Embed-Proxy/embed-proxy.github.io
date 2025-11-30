@@ -31,17 +31,114 @@
         <iframe id="embedFrame" allowfullscreen></iframe>
     </div>
     <script>
-        let fullPath = window.location.pathname.substring(1) + window.location.search;
-        fullPath = fullPath.replace(/^https?:\/\//i, '');
-        fullPath = fullPath.replace(/^www\./i, '');
-        fullPath = 'www.' + fullPath;
-        if (fullPath) {
-            const iframe = document.getElementById('embedFrame');
-            iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');            
-            iframe.src = `https://${fullPath}`;
-        } else {
-            document.body.innerHTML = '<p style="color: white; font-family: sans-serif;">No URL provided. Use / followed by the embed domain and path, e.g., /www.youtube-nocookie.com/embed/VIDEO_ID?autoplay=1</p>';
-        }
+const iframe = document.getElementById('embedFrame');
+iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
+
+const rawInput = window.location.pathname.slice(1) + window.location.search;
+
+// If nothing after the first /, show help
+if (!rawInput.trim()) {
+  document.body.innerHTML = '<p style="color: white; font-family: sans-serif; padding: 2rem;">No URL provided. Use: <code>/youtube.com/watch?v=dQw4w9WgXcQ</code> or <code>/youtube-nocookie.com/embed/abc123</code> or just <code>/dQw4w9WgXcQ</code></p>';
+  throw new Error("No input");
+}
+
+// Helper: detect if string looks like a playlist ID (PL, VL, UU, etc. + long)
+function isPlaylistID(id) {
+  const clean = id.split('?')[0];
+  return clean.length > 11 && (clean.startsWith('PL') || clean.startsWith('VL') || clean.startsWith('UU') || clean.startsWith('FL'));
+}
+
+// Main logic
+let embedUrl = '';
+
+// Step 1: Try to extract a clean URL from path (supports many formats)
+let userUrl = rawInput
+  .replace(/^(https?:\/\/)?(www\.)?/i, '')  // strip protocol & www
+  .split('?')[0]                             // remove any extra query params temporarily
+  .split('#')[0];                            // remove hash
+
+// Re-add original search params if they exist (we'll preserve them later)
+const originalParams = new URLSearchParams(window.location.search);
+
+// Now detect YouTube patterns
+if (userUrl.includes('youtube.com') || userUrl.includes('youtu.be') || userUrl.includes('youtube-nocookie.com')) {
+
+  // Extract video ID from common YouTube patterns
+  let videoId = null;
+  let playlistId = null;
+  let isShort = false;
+
+  // youtu.be/dQw4w9WgXcQ
+  if (userUrl.includes('youtu.be/')) {
+    videoId = userUrl.split('youtu.be/')[1].split('?')[0].split('&')[0].split('#')[0];
+  }
+  // youtube.com/shorts/ABC123
+  else if (userUrl.includes('/shorts/')) {
+    videoId = userUrl.split('/shorts/')[1].split('?')[0];
+    isShort = true;
+  }
+  // youtube.com/watch?v=ABC123
+  else if (userUrl.includes('watch?v=')) {
+    videoId = new URLSearchParams(userUrl.split('?')[1] || '').get('v') || userUrl.split('watch?v=')[1]?.split('&')[0];
+  }
+  // youtube.com/embed/ABC123
+  else if (userUrl.includes('/embed/')) {
+    videoId = userUrl.split('/embed/')[1].split('?')[0];
+  }
+  // playlist?list=PL...
+  else if (userUrl.includes('playlist?list=') || originalParams.has('list')) {
+    playlistId = originalParams.get('list') || userUrl.split('list=')[1]?.split('&')[0];
+  }
+
+  // Handle multiple video IDs: v=abc,def,ghi
+  const vParam = originalParams.get('v');
+  if (vParam) {
+    const ids = vParam.split(',').filter(Boolean);
+    if (ids.length > 1) {
+      embedUrl = `https://www.youtube-nocookie.com/embed/?playlist=${ids.join(',')}&autoplay=1`;
+    } else if (ids[0]) {
+      videoId = ids[0];
+    }
+  }
+
+  // Final embed URL construction
+  if (playlistId || (videoId && isPlaylistID(videoId))) {
+    const list = playlistId || videoId;
+    embedUrl = `https://www.youtube-nocookie.com/embed/videoseries?list=${list}&autoplay=1`;
+  }
+  else if (videoId) {
+    let params = new URLSearchParams(originalParams);
+    // Force autoplay and clean up
+    params.set('autoplay', '1');
+    // Optional: add privacy enhancements
+    params.delete('v'); // prevent confusion
+
+    embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+  }
+}
+
+// Fallback: user gave direct embed path like youtube-nocookie.com/embed/abc123
+if (!embedUrl && (userUrl.includes('youtube-nocookie.com') || userUrl.includes('youtube.com/embed'))) {
+  let base = userUrl.startsWith('http') ? userUrl : 'https://' + userUrl;
+  const params = new URLSearchParams(window.location.search);
+  params.set('autoplay', '1'); // force autoplay
+  embedUrl = base.split('?')[0] + '?' + params.toString();
+}
+
+// Last resort: treat as direct embed path (your original behavior)
+if (!embedUrl) {
+  let cleaned = rawInput.replace(/^(https?:\/\/)?(www\.)?/i, '');
+  embedUrl = 'https://' + cleaned;
+  // Force autoplay if it's YouTube
+  if (cleaned.includes('youtube') && !cleaned.includes('autoplay')) {
+    embedUrl += (embedUrl.includes('?') ? '&' : '?') + 'autoplay=1';
+  }
+}
+
+// Final: set iframe src
+iframe.src = embedUrl;
+
+console.log('Final embed URL:', embedUrl);
     </script>
 </body>
 </html>
