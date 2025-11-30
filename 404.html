@@ -34,6 +34,8 @@ iframe {position:fixed;top:0;left:0;width: 100%;height: 100%;border: none;}
 .error input{min-width:50%;padding:10px;margin:10px 0;font-size:16px;background:#222;border:1px solid #555;color:#fff}
 .error button{padding:10px 20px;font-size:16px;background:#333;border:none;color:#fff;cursor:pointer}
 .error button:hover{background:#555}
+a{color:#888;font-size:12px;text-decoration:none;}
+a:hover{text-decoration:underline;color:#aaa}
 
 </style>
 </head>
@@ -41,17 +43,16 @@ iframe {position:fixed;top:0;left:0;width: 100%;height: 100%;border: none;}
 <div id="container"><iframe id="embedFrame" allowfullscreen></iframe></div>
 <div id="error" class="error">
   No URL provided. Enter a YouTube or other embeddable URL below:<br>
-  <input id="urlinput" placeholder="https://youtu.be/..." autofocus><br>
+  <input id="url-input" placeholder="https://youtu.be/..." autofocus><br>
   <button onclick="newEmbedUrl()">Load</button><br><br>
-  <a href="https://github.com/Embed-Proxy/embed-proxy.github.io" target="_blank" style="color:#888;font-size:12px;text-decoration:none;">Embed Proxy on GitHub</a>
+  <a href="https://github.com/Embed-Proxy/embed-proxy.github.io" target="_blank">Embed Proxy on GitHub</a>
 </div>
-
 <script>
+
 const iframe = document.getElementById('embedFrame');
 iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen');
-
 const raw = window.location.pathname.slice(1) + window.location.search;
-const inputUrl = document.getElementById('urlinput');
+const inputUrl = document.getElementById('url-input');
 function newEmbedUrl() {const val = inputUrl.value.trim();
   if (val) location.href = '/' + val;}
 if (!raw.trim()) {
@@ -60,16 +61,10 @@ if (!raw.trim()) {
   inputUrl.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });
   throw new Error("No input");
 }
-let embedUrl = '';
 const urlParams = new URLSearchParams(window.location.search);
-function isPlaylistID(id) {
-  const clean = (id || '').split('?')[0];
-  return clean.length > 11;
-}
+function isPlaylistID(id) {return (id || '').split('?')[0].length > 11;}
 // Full YouTube URL parsing
-let cleaned = raw
-  .replace(/^(https?:\/\/)?(www\.)?/gi, '')
-  .replace(/#.*$/, '');
+let cleaned = raw.replace(/^(https?:\/\/)?(www\.)?/gi, '').replace(/#.*$/, '');
 let videoId = null;
 let finalParams = new URLSearchParams();
 finalParams.set('autoplay', '1');
@@ -92,8 +87,8 @@ else if (cleaned.includes('youtube.com/watch')) {
   if (v) {
     const ids = v.split(',').filter(Boolean);
     if (ids.length > 1) {
-      embedUrl = `https://www.youtube-nocookie.com/embed/?playlist=${ids.join(',')}&${finalParams.toString()}`;
-      iframe.src = embedUrl; throw new Error("Done");
+      iframe.src = `https://www.youtube-nocookie.com/embed/?playlist=${ids.join(',')}&${finalParams.toString()}`;
+      throw new Error("Done");
     }
     videoId = ids[0];
   }
@@ -116,8 +111,8 @@ else if (cleaned.includes('youtube.com/embed/') || cleaned.includes('youtube-noc
 else if (urlParams.has('list') && !videoId) {
   const list = urlParams.get('list');
   if (isPlaylistID(list)) {
-    embedUrl = `https://www.youtube-nocookie.com/embed/videoseries?list=${list}&${finalParams.toString()}`;
-    iframe.src = embedUrl; throw new Error("Done");
+    iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=${list}&${finalParams.toString()}`;
+    throw new Error("Done");
   }
 }
 // Copy remaining params
@@ -128,17 +123,13 @@ for (const [k, v] of urlParams) {
 if (videoId || urlParams.has('list')) {
   if (!videoId && urlParams.has('list')) {
     // playlist without specific video
-    embedUrl = `https://www.youtube-nocookie.com/embed/videoseries?list=${urlParams.get('list')}&${finalParams.toString()}`;
+    iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=${urlParams.get('list')}&${finalParams.toString()}`;
   } else {
     // normal video (with optional playlist context)
-    embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?${finalParams.toString()}`;
+    iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?${finalParams.toString()}`;
   }
-} else {
-  // Passthrough: use the original raw input unchanged
-  embedUrl = raw;
-}
-iframe.src = embedUrl;
-console.log('Final embed URL →', embedUrl);
+} else {iframe.src = raw;}// if not youtube, just use raw url
+console.log(iframe.src);
 
 </script>
 </body>
