@@ -16,7 +16,21 @@ body {
 }
 #container {margin: auto;padding-bottom: 56.25%;}
 iframe {position:fixed;top:0;left:0;width: 100%;height: 100%;border: none;}
-.error{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.error{
+  display:none;
+  position:absolute;
+  inset:0;
+  margin:auto;
+  width:fit-content;
+  max-width:90vw;
+  min-width:320px;
+  height:fit-content;
+  padding:20px;
+  background:rgba(0,0,0,0.9);
+  border-radius:8px;
+  text-align:center;
+  box-sizing:border-box;
+}
 .error input{min-width:50%;padding:10px;margin:10px 0;font-size:16px;background:#222;border:1px solid #555;color:#fff}
 .error button{padding:10px 20px;font-size:16px;background:#333;border:none;color:#fff;cursor:pointer}
 .error button:hover{background:#555}
