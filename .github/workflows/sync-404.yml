@@ -1,10 +1,8 @@
 name: Sync 404.html
-
 on:
   push:
     paths:
       - index.html
-
 jobs:
   copy:
     runs-on: ubuntu-latest
@@ -18,4 +16,3 @@ jobs:
           git add 404.html
           git diff --quiet && git diff --staged --quiet || git commit -m "chore: sync 404.html ← index.html"
           git push
-          

@@ -1,0 +1,15 @@
+name: Deploy Pages After Sync
+on:
+  workflow_run:
+    workflows: ["Sync 404.html"]
+    types: [completed]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: github-hosted-pages-actor
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
