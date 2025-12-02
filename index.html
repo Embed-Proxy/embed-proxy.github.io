@@ -2,7 +2,6 @@
 <title>Embed Proxy</title>
 <style>
 
-
 *{transition: all .6s;}
 body {margin: 0;padding: 0;display: flex;
  justify-content: center;align-items: center;
@@ -29,7 +28,6 @@ iframe {position:fixed;top:0;left:0;width:100%;height:100%;border:none;}
 a{color:#888;font-size:.8rem;}
 a:hover{color:#aaa}
 
-
 </style>
 </head>
 <body>
@@ -41,7 +39,6 @@ No URL provided. Enter a YouTube or other embeddable URL below:<br>
 <a href="https://github.com/Embed-Proxy/embed-proxy.github.io" target="_blank">Embed Proxy on GitHub</a>
 </div>
 <script>
-
 
 const iframe = document.querySelector('iframe');
 const raw = window.location.pathname.slice(1) + window.location.search;
@@ -64,22 +61,6 @@ finalParams.set('autoplay', '1');
 // — Direct embed: simplify to pass through with autoplay=1 added (preserves all params)
 if (cleaned.startsWith('youtube.com/embed/') || cleaned.startsWith('youtube-nocookie.com/embed/')) {
  let url = new URL('https://www.' + cleaned.replace('youtube.com/', 'youtube-nocookie.com/'));
- const pl = url.searchParams.get('playlist');
- if (pl && pl.includes('?')) {
-  const q = pl.split(','), k = 'ep_idx_' + btoa(pl).slice(0,12);
-  let i = parseInt(localStorage.getItem(k)||0);
-  if (i >= q.length) i = 0;
-  const load = () => {
-   const [v, p] = q[i].split('?');
-   iframe.src = `https://www.youtube-nocookie.com/embed/${v}?autoplay=1&enablejsapi=1&${p||''}`;
-  }; load();
-  window.onmessage = e => {
-   let d = e.data; try{d=JSON.parse(d)}catch(z){}
-   if(d?.info?.playerState === 0) {
-    i = (i + 1) % q.length; localStorage.setItem(k, i); load();
-   }
-  }; throw new Error("Done");
- }
  url.searchParams.set('autoplay', '1');
  iframe.src = url.toString(); throw new Error("Done");
 }
@@ -142,7 +123,6 @@ if (videoId || urlParams.has('list')) {
  }
 } else {iframe.src = raw;}// if not youtube, just use raw url
 console.log(iframe.src);
-
 
 </script>
 </body>
