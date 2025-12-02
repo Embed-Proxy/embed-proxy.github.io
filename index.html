@@ -61,34 +61,29 @@ let cleaned = raw.replace(/^(https?:\/\/)?(www\.)?/gi, '').replace(/#.*$/, '');
 let videoId = null;
 let finalParams = new URLSearchParams();
 finalParams.set('autoplay', '1');
-// — Direct embed with Playlist support
+// — Direct embed: simplify to pass through with autoplay=1 added (preserves all params)
 if (cleaned.startsWith('youtube.com/embed/') || cleaned.startsWith('youtube-nocookie.com/embed/')) {
- if (cleaned.includes('playlist=')) {
-  const plRaw = cleaned.split('playlist=')[1];
-  if (plRaw) {
-   const q = plRaw.split(',');
-   const k = 'ep_idx_' + btoa(plRaw).slice(0,12);
-   let i = parseInt(localStorage.getItem(k)||0);
-   if (i >= q.length) i = 0;
-   const load = () => {
-    const [v, p] = q[i].split('?');
-    // Origin is required for enablejsapi to work across domains
-    iframe.src = `https://www.youtube-nocookie.com/embed/${v}?autoplay=1&enablejsapi=1&origin=${window.location.origin}&${p||''}`;
-   }; load();
-   window.addEventListener('message', e => {
-    let d = e.data;
-    if (typeof d === 'string') try{d=JSON.parse(d)}catch(z){}
-    if(d?.info?.playerState === 0) {
-     i = (i + 1) % q.length; localStorage.setItem(k, i); load();
-    }
-   }); throw new Error("Done");
-  }
- }
  let url = new URL('https://www.' + cleaned.replace('youtube.com/', 'youtube-nocookie.com/'));
+ const pl = url.searchParams.get('playlist');
+ if (pl && pl.includes('?')) {
+  const q = pl.split(','), k = 'ep_idx_' + btoa(pl).slice(0,12);
+  let i = parseInt(localStorage.getItem(k)||0);
+  if (i >= q.length) i = 0;
+  const load = () => {
+   const [v, p] = q[i].split('?');
+   iframe.src = `https://www.youtube-nocookie.com/embed/${v}?autoplay=1&enablejsapi=1&${p||''}`;
+  }; load();
+  window.onmessage = e => {
+   let d = e.data; try{d=JSON.parse(d)}catch(z){}
+   if(d?.info?.playerState === 0) {
+    i = (i + 1) % q.length; localStorage.setItem(k, i); load();
+   }
+  }; throw new Error("Done");
+ }
  url.searchParams.set('autoplay', '1');
  iframe.src = url.toString(); throw new Error("Done");
 }
-// — youtu.be links
+// — youtu.be links (most common shared form)
 if (cleaned.startsWith('youtu.be/')) {
  videoId = cleaned.split('youtu.be/')[1].split('?')[0].split('&')[0].split('#')[0];
  if (urlParams.has('t')) {
@@ -96,6 +91,7 @@ if (cleaned.startsWith('youtu.be/')) {
   if (!isNaN(t)) finalParams.set('start', t);
  }
  if (urlParams.has('list')) finalParams.set('list', urlParams.get('list'));
+ // Copy any other params (rel=0, mute=1, etc.)
  for (const [k, v] of urlParams) {
   if (!['t', 'list', 'v'].includes(k)) finalParams.set(k, v);
  }
@@ -116,6 +112,7 @@ else if (cleaned.startsWith('youtube.com/watch')) {
    const t = parseInt(urlParams.get('t'), 10);
    if (!isNaN(t)) finalParams.set('start', t);
  }
+ // Copy any other params
  for (const [k, v] of urlParams) {
    if (!['v', 't', 'list'].includes(k)) finalParams.set(k, v);
  }
@@ -123,9 +120,10 @@ else if (cleaned.startsWith('youtube.com/watch')) {
 // — Shorts
 else if (cleaned.startsWith('youtube.com/shorts/')) {
  videoId = cleaned.split('shorts/')[1].split('?')[0];
+ // Copy any other params
  for (const [k, v] of urlParams) finalParams.set(k, v);
 }
-// — Playlist-only link
+// — Playlist-only link (for non-embed URLs)
 else if (urlParams.has('list') && !videoId) {
  const list = urlParams.get('list');
  if (isPlaylistID(list)) {
@@ -136,11 +134,13 @@ else if (urlParams.has('list') && !videoId) {
 // Final embed URL construction
 if (videoId || urlParams.has('list')) {
  if (!videoId && urlParams.has('list')) {
+   // playlist without specific video
    iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=${urlParams.get('list')}&${finalParams.toString()}`;
  } else {
+   // normal video (with optional playlist context)
    iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?${finalParams.toString()}`;
  }
-} else {iframe.src = raw;}
+} else {iframe.src = raw;}// if not youtube, just use raw url
 console.log(iframe.src);
 
 
