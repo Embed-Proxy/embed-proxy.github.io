@@ -1,17 +1,35 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Embed Proxy</title>
 <style>
+
+
 *{transition: all .6s;}
-body {margin: 0;padding: 0;display: flex;justify-content: center;align-items: center;height: 100vh; overflow: hidden;background-color: black;color: white;font-family: Arial, sans-serif;}
+body {margin: 0;padding: 0;display: flex;
+  justify-content: center;align-items: center;
+  height: 100vh; overflow: hidden;
+  background-color: black;color: white;font-family: Arial, sans-serif;}
 #container {position:relative;padding:56.25% 0 0 0;}
 iframe {position:fixed;top:0;left:0;width:100%;height:100%;border:none;}
-#enter-url{display:none;position:absolute;inset:0;margin:auto;width:fit-content;max-width:90vw;min-width:50vw;height:fit-content;padding:2rem;background:#111;border-radius:.5rem;text-align:center;box-sizing:border-box;}
+#enter-url{display:none;position:absolute;
+  inset:0;
+  margin:auto;
+  width:fit-content;
+  max-width:90vw;
+  min-width:50vw;
+  height:fit-content;
+  padding:2rem;
+  background:#111;
+  border-radius:.5rem;
+  text-align:center;
+  box-sizing:border-box;}
 #enter-url input{min-width:50%;padding:.7rem;margin:1rem 0;font-size:1.1rem;background:#222;border:1px solid #555;border-radius:.7rem;color:#fff;}
 #enter-url input:hover{background:#000;border-color:#4300ed;}
 #enter-url button{padding:.7rem 1.6rem;margin:0 0 .7rem; font-size:1.1rem;background:#333;border:1px solid;border-radius:1rem;color:#fff;}
 #enter-url button:hover{background:#555;border-color:#4300ed;cursor:pointer;}
 a{color:#888;font-size:.8rem;}
 a:hover{color:#aaa}
+
+
 </style>
 </head>
 <body>
@@ -23,78 +41,109 @@ No URL provided. Enter a YouTube or other embeddable URL below:<br>
 <a href="https://github.com/Embed-Proxy/embed-proxy.github.io" target="_blank">Embed Proxy on GitHub</a>
 </div>
 <script>
+
+
 const iframe = document.querySelector('iframe');
 const raw = window.location.pathname.slice(1) + window.location.search;
 const inputUrl = document.getElementById('url-input');
-function newEmbedUrl() {const val = inputUrl.value.trim();if (val) location.href = '/' + val;}
-if (!raw.trim()) {document.getElementById('enter-url').style.display = 'block';inputUrl.focus();inputUrl.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });throw new Error("No input");}
+function newEmbedUrl() {const val = inputUrl.value.trim();
+if (val) location.href = '/' + val;}
+if (!raw.trim()) {
+  document.getElementById('enter-url').style.display = 'block';
+  inputUrl.focus();
+  inputUrl.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });
+  throw new Error("No input");
+}
 const urlParams = new URLSearchParams(window.location.search);
 function isPlaylistID(id) {return (id || '').split('?')[0].length > 11;}
-function parsePlaylistParams(idStr) {const [id, ...rest] = idStr.split('?');const params = {};if (rest.length) {rest.forEach(p => {const [k, v] = p.split('=');if (k && v) params[k] = v;});}return {id, params};}
-function buildPlaylistMap(idsStr) {const entries = idsStr.split(',').map(e => parsePlaylistParams(e.trim()));const map = {};entries.forEach(({id, params}) => {map[id] = params;});sessionStorage.setItem('__plParams', JSON.stringify(map));return entries.map(e => e.id);}
-function getVideoParams(vid) {const map = JSON.parse(sessionStorage.getItem('__plParams') || '{}');return map[vid] || {};}
-function applyParamsToUrl(baseUrl, params) {const url = new URL(baseUrl);Object.entries(params).forEach(([k, v]) => {url.searchParams.set(k, v);});return url.toString();}
+// Full YouTube URL parsing
 let cleaned = raw.replace(/^(https?:\/\/)?(www\.)?/gi, '').replace(/#.*$/, '');
 let videoId = null;
 let finalParams = new URLSearchParams();
 finalParams.set('autoplay', '1');
+// — Direct embed: simplify to pass through with autoplay=1 added (preserves all params)
 if (cleaned.startsWith('youtube.com/embed/') || cleaned.startsWith('youtube-nocookie.com/embed/')) {
-  let embedUrl = 'https://www.' + cleaned.replace('youtube.com/', 'youtube-nocookie.com/');
-  let playlistMatch = embedUrl.match(/[?&]playlist=([^&]*)/);
-  if (playlistMatch) {
-    const playlistStr = decodeURIComponent(playlistMatch[1]);
-    if (playlistStr.includes('?') || playlistStr.includes('&')) {
-      const vidList = buildPlaylistMap(playlistStr);
-      sessionStorage.setItem('__currentPlayIdx', '0');
-      const url = new URL(embedUrl);
-      url.searchParams.set('playlist', vidList.join(','));
-      url.searchParams.set('autoplay', '1');
-      const vidParams = getVideoParams(vidList[0]);
-      iframe.src = applyParamsToUrl(url.toString(), vidParams);
-    } else {
-      const url = new URL(embedUrl);
-      url.searchParams.set('autoplay', '1');
-      iframe.src = url.toString();
-    }
-  } else {
-    const url = new URL(embedUrl);
-    url.searchParams.set('autoplay', '1');
-    iframe.src = url.toString();
-  }
-  throw new Error("Done");
+  let url = new URL('https://www.' + cleaned.replace('youtube.com/', 'youtube-nocookie.com/'));
+  const pl = url.searchParams.get('playlist');
+  if (pl && pl.includes('?')) {
+    const q = pl.split(','), k = 'ep_idx_' + btoa(pl).slice(0,12);
+    let i = parseInt(localStorage.getItem(k)||0);
+    if (i >= q.length) i = 0;
+    const load = () => {
+      const [v, p] = q[i].split('?');
+      iframe.src = `https://www.youtube-nocookie.com/embed/${v}?autoplay=1&enablejsapi=1&${p||''}`;
+    }; load();
+    window.onmessage = e => {
+      let d = e.data; try{d=JSON.parse(d)}catch(z){}
+      if(d?.info?.playerState === 0) {
+        i = (i + 1) % q.length; localStorage.setItem(k, i); load();
+      }
+    }; throw new Error("Done");
+  }
+  url.searchParams.set('autoplay', '1');
+  iframe.src = url.toString(); throw new Error("Done");
 }
+// — youtu.be links (most common shared form)
 if (cleaned.startsWith('youtu.be/')) {
-  videoId = cleaned.split('youtu.be/')[1].split('?')[0].split('&')[0].split('#')[0];
-  if (urlParams.has('t')) {const t = parseInt(urlParams.get('t'), 10);if (!isNaN(t)) finalParams.set('start', t);}
-  if (urlParams.has('list')) finalParams.set('list', urlParams.get('list'));
-  for (const [k, v] of urlParams) {if (!['t', 'list', 'v'].includes(k)) finalParams.set(k, v);}
+  videoId = cleaned.split('youtu.be/')[1].split('?')[0].split('&')[0].split('#')[0];
+  if (urlParams.has('t')) {
+    const t = parseInt(urlParams.get('t'), 10);
+    if (!isNaN(t)) finalParams.set('start', t);
+  }
+  if (urlParams.has('list')) finalParams.set('list', urlParams.get('list'));
+  // Copy any other params (rel=0, mute=1, etc.)
+  for (const [k, v] of urlParams) {
+    if (!['t', 'list', 'v'].includes(k)) finalParams.set(k, v);
+  }
 }
+// — Regular youtube.com/watch
 else if (cleaned.startsWith('youtube.com/watch')) {
-  const v = urlParams.get('v') || cleaned.split('v=')[1]?.split('&')[0];
-  if (v) {const ids = v.split(',').filter(Boolean);if (ids.length > 1) {const vidList = buildPlaylistMap(v);sessionStorage.setItem('__currentPlayIdx', '0');iframe.src = `https://www.youtube-nocookie.com/embed/?playlist=${vidList.join(',')}&${finalParams.toString()}`;throw new Error("Done");} videoId = ids[0];}
-  if (urlParams.has('list')) finalParams.set('list', urlParams.get('list'));
-  if (urlParams.has('t')) {const t = parseInt(urlParams.get('t'), 10);if (!isNaN(t)) finalParams.set('start', t);}
-  for (const [k, v] of urlParams) {if (!['v', 't', 'list'].includes(k)) finalParams.set(k, v);}
+  const v = urlParams.get('v') || cleaned.split('v=')[1]?.split('&')[0];
+  if (v) {
+    const ids = v.split(',').filter(Boolean);
+    if (ids.length > 1) {
+      iframe.src = `https://www.youtube-nocookie.com/embed/?playlist=${ids.join(',')}&${finalParams.toString()}`;
+      throw new Error("Done");
+    }
+    videoId = ids[0];
+  }
+  if (urlParams.has('list')) finalParams.set('list', urlParams.get('list'));
+  if (urlParams.has('t')) {
+      const t = parseInt(urlParams.get('t'), 10);
+      if (!isNaN(t)) finalParams.set('start', t);
+  }
+  // Copy any other params
+  for (const [k, v] of urlParams) {
+      if (!['v', 't', 'list'].includes(k)) finalParams.set(k, v);
+  }
 }
+// — Shorts
 else if (cleaned.startsWith('youtube.com/shorts/')) {
-  videoId = cleaned.split('shorts/')[1].split('?')[0];
-  for (const [k, v] of urlParams) finalParams.set(k, v);
+  videoId = cleaned.split('shorts/')[1].split('?')[0];
+  // Copy any other params
+  for (const [k, v] of urlParams) finalParams.set(k, v);
 }
+// — Playlist-only link (for non-embed URLs)
 else if (urlParams.has('list') && !videoId) {
-  const list = urlParams.get('list');
-  if (isPlaylistID(list)) {
-    iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=${list}&${finalParams.toString()}`;
-    throw new Error("Done");
-  }
+  const list = urlParams.get('list');
+  if (isPlaylistID(list)) {
+    iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=${list}&${finalParams.toString()}`;
+    throw new Error("Done");
+  }
 }
+// Final embed URL construction
 if (videoId || urlParams.has('list')) {
-  if (!videoId && urlParams.has('list')) {
-    iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=${urlParams.get('list')}&${finalParams.toString()}`;
-  } else {
-    iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?${finalParams.toString()}`;
-  }
-} else {iframe.src = raw;}
+  if (!videoId && urlParams.has('list')) {
+      // playlist without specific video
+      iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=${urlParams.get('list')}&${finalParams.toString()}`;
+  } else {
+      // normal video (with optional playlist context)
+      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?${finalParams.toString()}`;
+  }
+} else {iframe.src = raw;}// if not youtube, just use raw url
 console.log(iframe.src);
+
+
 </script>
 </body>
 </html>
