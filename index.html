@@ -39,9 +39,28 @@ let videoId = null;
 let finalParams = new URLSearchParams();
 finalParams.set('autoplay', '1');
 if (cleaned.startsWith('youtube.com/embed/') || cleaned.startsWith('youtube-nocookie.com/embed/')) {
-  let url = new URL('https://www.' + cleaned.replace('youtube.com/', 'youtube-nocookie.com/'));
-  url.searchParams.set('autoplay', '1');
-  const playlistParam = url.searchParams.get('playlist');if (playlistParam) {const ids = buildPlaylistMap(playlistParam);sessionStorage.setItem('__currentPlayIdx', '0');url.searchParams.set('playlist', ids.join(','));const vidParams = getVideoParams(ids[0]);iframe.src = applyParamsToUrl(url.toString(), vidParams);} else {iframe.src = url.toString();}
+  let embedUrl = 'https://www.' + cleaned.replace('youtube.com/', 'youtube-nocookie.com/');
+  let playlistMatch = embedUrl.match(/[?&]playlist=([^&]*)/);
+  if (playlistMatch) {
+    const playlistStr = decodeURIComponent(playlistMatch[1]);
+    if (playlistStr.includes('?') || playlistStr.includes('&')) {
+      const vidList = buildPlaylistMap(playlistStr);
+      sessionStorage.setItem('__currentPlayIdx', '0');
+      const url = new URL(embedUrl);
+      url.searchParams.set('playlist', vidList.join(','));
+      url.searchParams.set('autoplay', '1');
+      const vidParams = getVideoParams(vidList[0]);
+      iframe.src = applyParamsToUrl(url.toString(), vidParams);
+    } else {
+      const url = new URL(embedUrl);
+      url.searchParams.set('autoplay', '1');
+      iframe.src = url.toString();
+    }
+  } else {
+    const url = new URL(embedUrl);
+    url.searchParams.set('autoplay', '1');
+    iframe.src = url.toString();
+  }
   throw new Error("Done");
 }
 if (cleaned.startsWith('youtu.be/')) {
