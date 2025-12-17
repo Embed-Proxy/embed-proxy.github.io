@@ -81,12 +81,12 @@ a:hover{color:#aaa}
 
   <div class="url-row">
     <input type="text" id="url-input" placeholder="https://youtu.be/..." autofocus>
-    <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value=".9" id="op-bottom"></label>
+    <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="1" id="op-bottom"></label>
   </div>
 
   <div class="url-row">
     <input type="text" id="url2-input" placeholder="https://youtu.be/... (optional overlay)">
-    <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="0.75" id="op-top"></label>
+    <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="0.65" id="op-top"></label>
   </div>
 
   <button onclick="newEmbedUrl()">Load</button><br><br>
@@ -115,7 +115,7 @@ const pageParams = new URLSearchParams(window.location.search);
 const url1 = pageParams.get('url');
 const url2 = pageParams.get('url2');
 const savedOp1 = pageParams.get('op1') || '1';
-const savedOp2 = pageParams.get('op2') || '0.5';
+const savedOp2 = pageParams.get('op2') || '0.65';
 
 if (!url1) {
   document.getElementById('enter-url').style.display = 'block';
