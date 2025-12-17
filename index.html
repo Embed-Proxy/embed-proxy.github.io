@@ -7,97 +7,152 @@
 <style>
 *{transition: all .6s;}
 body {margin: 0;padding: 0;display: flex;
- justify-content: center;align-items: center;
- height: 100vh; overflow: hidden;
- background-color: black;color: white;font-family: Arial, sans-serif;}
-#container {position:relative;padding:56.25% 0 0 0;}
-iframe {position:absolute;top:0;left:0;width:100%;height:100%;border:none;}
-#enter-url{display:none;position:absolute;
- inset:0;
- margin:auto;
- width:fit-content;
- max-width:90vw;
- min-width:50vw;
- height:fit-content;
- padding:2rem;
- background:#111;
- border-radius:.5rem;
- text-align:center;
- box-sizing:border-box;}
-#enter-url input{min-width:50%;padding:.7rem;margin:1rem 0;font-size:1.1rem;background:#222;border:1px solid #555;border-radius:.7rem;color:#fff;}
+  justify-content: center;align-items: center;
+  height: 100vh; overflow: hidden;
+  background-color: black;color: white;font-family: Arial, sans-serif;}
+#container {position: relative; width: 100%; height: 100%;}
+iframe {position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; pointer-events: none;}
+iframe.top {pointer-events: auto; z-index: 10;}
+#enter-url{
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: fit-content;
+  max-width: 90vw;
+  min-width: 50vw;
+  height: fit-content;
+  padding: 2rem;
+  background: #111;
+  border-radius: .5rem;
+  text-align: center;
+  box-sizing: border-box;
+  z-index: 20;
+}
+#enter-url input{
+  min-width: 60%;
+  padding: .7rem;
+  margin: .5rem 0;
+  font-size: 1.1rem;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: .7rem;
+  color: #fff;
+}
 #enter-url input:hover{background:#000;border-color:#4300ed;}
-#enter-url button{padding:.7rem 1.6rem;margin:0 0 .7rem; font-size:1.1rem;background:#333;border:1px solid;border-radius:1rem;color:#fff;}
+#enter-url button{
+  padding: .7rem 1.6rem;
+  margin: .7rem 0;
+  font-size: 1.1rem;
+  background: #333;
+  border: 1px solid;
+  border-radius: 1rem;
+  color: #fff;
+}
 #enter-url button:hover{background:#555;border-color:#4300ed;cursor:pointer;}
+.url-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.opacity-slider {
+  width: 150px;
+}
+label.opacity-label {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
 a{color:#888;font-size:.8rem;}
 a:hover{color:#aaa}
-#controls {position:fixed; bottom:1rem; right:1rem; background:#111; padding:1rem; border-radius:.5rem; color:white;}
 </style>
 </head>
 <body>
-<div id="container"><iframe allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"></iframe></div>
-<div id="enter-url">
-No URL provided. Enter a YouTube or other embeddable URL below:<br>
-<input id="url-input" placeholder="https://youtu.be/..." autofocus><br>
-Optional second URL (overlay):<br>
-<input id="url2-input" placeholder="https://youtu.be/..."><br>
-<button onclick="newEmbedUrl()">Load</button><br><br>
-<a href="https://github.com/Embed-Proxy/embed-proxy.github.io" target="_blank">Embed Proxy on GitHub</a>
+<div id="container">
+  <iframe id="bottom-iframe" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"></iframe>
 </div>
+
+<div id="enter-url">
+  No URL provided. Enter a YouTube or other embeddable URL below:<br><br>
+
+  <div class="url-row">
+    <input id="url-input" placeholder="https://youtu.be/..." autofocus>
+    <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="1" id="op-bottom"></label>
+  </div>
+
+  <div class="url-row">
+    <input id="url2-input" placeholder="https://youtu.be/... (optional overlay)">
+    <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="0.5" id="op-top"></label>
+  </div>
+
+  <button onclick="newEmbedUrl()">Load</button><br><br>
+  <a href="https://github.com/Embed-Proxy/embed-proxy.github.io" target="_blank">Embed Proxy on GitHub</a>
+</div>
+
 <script>
 const inputUrl = document.getElementById('url-input');
 const inputUrl2 = document.getElementById('url2-input');
+const opBottom = document.getElementById('op-bottom');
+const opTop = document.getElementById('op-top');
+
 function newEmbedUrl() {
   const val1 = inputUrl.value.trim();
   const val2 = inputUrl2.value.trim();
   if (val1) {
-    const search = '?url=' + encodeURIComponent(val1) + (val2 ? '&url2=' + encodeURIComponent(val2) : '');
+    const search = '?url=' + encodeURIComponent(val1) +
+      (val2 ? '&url2=' + encodeURIComponent(val2) : '') +
+      '&op1=' + opBottom.value +
+      '&op2=' + opTop.value;
     location.search = search;
   }
 }
+
 const pageParams = new URLSearchParams(window.location.search);
 const url1 = pageParams.get('url');
 const url2 = pageParams.get('url2');
+const savedOp1 = pageParams.get('op1') || '1';
+const savedOp2 = pageParams.get('op2') || '0.5';
+
 if (!url1) {
   document.getElementById('enter-url').style.display = 'block';
   inputUrl.focus();
   inputUrl.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });
   inputUrl2.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });
 } else {
-  const bottom = document.querySelector('iframe');
+  document.getElementById('enter-url').style.display = 'none';
+
+  const bottom = document.getElementById('bottom-iframe');
   bottom.src = getEmbedSrc(url1);
+  bottom.style.opacity = savedOp1;
+
   if (url2) {
     const top = bottom.cloneNode();
+    top.id = 'top-iframe';
+    top.classList.add('top');
     document.getElementById('container').appendChild(top);
     top.src = getEmbedSrc(url2);
-    const controls = document.createElement('div');
-    controls.id = 'controls';
-    controls.innerHTML = `
-      <label>Bottom opacity: <input type="range" min="0" max="1" step="0.01" value="1" id="op-bottom"></label><br>
-      <label>Top opacity: <input type="range" min="0" max="1" step="0.01" value="0.5" id="op-top"></label>
-    `;
-    document.body.appendChild(controls);
-    const opBottom = document.getElementById('op-bottom');
-    const opTop = document.getElementById('op-top');
-    bottom.style.opacity = opBottom.value;
-    top.style.opacity = opTop.value;
-    opBottom.addEventListener('input', e => bottom.style.opacity = e.target.value);
-    opTop.addEventListener('input', e => top.style.opacity = e.target.value);
+    top.style.opacity = savedOp2;
   }
 }
+
 function isPlaylistID(id) { return (id || '').split('?')[0].length > 11; }
+
 function getEmbedSrc(input) {
   if (!input) return '';
-  const parsed = new URL(input.startsWith('http') ? input : 'https://' + input);
   let cleaned = input.replace(/^(https?:\/\/)?(www\.)?/gi, '').replace(/#.*$/, '');
+  const parsed = new URL(input.startsWith('http') ? input : 'https://' + input);
   const urlParams = parsed.searchParams;
   let videoId = null;
   let finalParams = new URLSearchParams();
   finalParams.set('autoplay', '1');
+
   if (cleaned.startsWith('youtube.com/embed/') || cleaned.startsWith('youtube-nocookie.com/embed/')) {
     let url = new URL('https://www.' + cleaned.replace('youtube.com/', 'youtube-nocookie.com/'));
     url.searchParams.set('autoplay', '1');
     return url.toString();
   }
+
   if (cleaned.startsWith('youtu.be/')) {
     videoId = cleaned.split('youtu.be/')[1].split(/[?&]/)[0];
     if (urlParams.has('t')) {
@@ -105,16 +160,12 @@ function getEmbedSrc(input) {
       if (!isNaN(t)) finalParams.set('start', t);
     }
     if (urlParams.has('list')) finalParams.set('list', urlParams.get('list'));
-    for (const [k, v] of urlParams) {
-      if (!['t', 'list', 'v'].includes(k)) finalParams.set(k, v);
-    }
+    for (const [k, v] of urlParams) if (!['t', 'list', 'v'].includes(k)) finalParams.set(k, v);
   } else if (cleaned.startsWith('youtube.com/watch')) {
     const v = urlParams.get('v') || cleaned.split('v=')[1]?.split(/[&]/)[0];
     if (v) {
       const ids = v.split(',').filter(Boolean);
-      if (ids.length > 1) {
-        return `https://www.youtube-nocookie.com/embed/?playlist=${ids.join(',')}&${finalParams.toString()}`;
-      }
+      if (ids.length > 1) return `https://www.youtube-nocookie.com/embed/?playlist=${ids.join(',')}&${finalParams.toString()}`;
       videoId = ids[0];
     }
     if (urlParams.has('list')) finalParams.set('list', urlParams.get('list'));
@@ -122,27 +173,23 @@ function getEmbedSrc(input) {
       const t = parseInt(urlParams.get('t'), 10);
       if (!isNaN(t)) finalParams.set('start', t);
     }
-    for (const [k, v] of urlParams) {
-      if (!['v', 't', 'list'].includes(k)) finalParams.set(k, v);
-    }
+    for (const [k, v] of urlParams) if (!['v', 't', 'list'].includes(k)) finalParams.set(k, v);
   } else if (cleaned.startsWith('youtube.com/shorts/')) {
     videoId = cleaned.split('shorts/')[1].split(/[?]/)[0];
     for (const [k, v] of urlParams) finalParams.set(k, v);
   } else if (urlParams.has('list') && !videoId) {
     const list = urlParams.get('list');
-    if (isPlaylistID(list)) {
-      return `https://www.youtube-nocookie.com/embed/videoseries?list=${list}&${finalParams.toString()}`;
-    }
+    if (isPlaylistID(list)) return `https://www.youtube-nocookie.com/embed/videoseries?list=${list}&${finalParams.toString()}`;
   }
+
   if (videoId || urlParams.has('list')) {
     if (!videoId && urlParams.has('list')) {
       return `https://www.youtube-nocookie.com/embed/videoseries?list=${urlParams.get('list')}&${finalParams.toString()}`;
     } else {
       return `https://www.youtube-nocookie.com/embed/${videoId}?${finalParams.toString()}`;
     }
-  } else {
-    return input;
   }
+  return input;
 }
 </script>
 </body>
