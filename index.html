@@ -28,8 +28,9 @@ iframe.top {pointer-events: auto; z-index: 10;}
   box-sizing: border-box;
   z-index: 20;
 }
-#enter-url input{
-  min-width: 60%;
+#enter-url input[type="text"]{
+  flex: 1;
+  min-width: 0;
   padding: .7rem;
   margin: .5rem 0;
   font-size: 1.1rem;
@@ -52,17 +53,19 @@ iframe.top {pointer-events: auto; z-index: 10;}
 .url-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
   gap: 1rem;
   margin: 1rem 0;
 }
-.opacity-slider {
-  width: 150px;
-}
-label.opacity-label {
+.opacity-label {
+  display: flex;
+  align-items: center;
   font-size: 0.9rem;
   white-space: nowrap;
+  flex: 0 0 auto;
+}
+.opacity-slider {
+  width: 100px;
+  margin-left: 0.5rem;
 }
 a{color:#888;font-size:.8rem;}
 a:hover{color:#aaa}
@@ -77,12 +80,12 @@ a:hover{color:#aaa}
   No URL provided. Enter a YouTube or other embeddable URL below:<br><br>
 
   <div class="url-row">
-    <input id="url-input" placeholder="https://youtu.be/..." autofocus>
+    <input type="text" id="url-input" placeholder="https://youtu.be/..." autofocus>
     <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="1" id="op-bottom"></label>
   </div>
 
   <div class="url-row">
-    <input id="url2-input" placeholder="https://youtu.be/... (optional overlay)">
+    <input type="text" id="url2-input" placeholder="https://youtu.be/... (optional overlay)">
     <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="0.5" id="op-top"></label>
   </div>
 
