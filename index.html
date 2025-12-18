@@ -28,7 +28,6 @@ iframe {
   border: none;
   pointer-events: none;
 }
-iframe.top {pointer-events: auto; z-index: 10;}
 
 #enter-url{
   position: absolute;
@@ -268,21 +267,20 @@ if (!pageParams.get('url1')) {
     } else {
       iframe = document.getElementById('bottom-iframe').cloneNode();
       iframe.id = 'iframe-' + i;
-      iframe.classList.add('top');
       document.getElementById('container').appendChild(iframe);
     }
     iframe.src = getEmbedSrc(url);
     iframe.style.opacity = op;
     iframe.style.zIndex = i;
     if (i > 1) iframe.style.mixBlendMode = blend;
-
-    // topmost iframe gets pointer events
     iframe.style.pointerEvents = 'none';
     i++;
   }
   // enable pointer events on the very top layer
-  const topIframe = document.querySelector('iframe.top') || document.getElementById('bottom-iframe');
-  if (topIframe) topIframe.style.pointerEvents = 'auto';
+  const iframes = document.querySelectorAll('#container iframe');
+  if (iframes.length > 0) {
+    iframes[iframes.length - 1].style.pointerEvents = 'auto';
+  }
 }
 
 // embed parsing logic unchanged
