@@ -6,13 +6,30 @@
 <title>Embed Proxy</title>
 <style>
 *{transition: all .6s;}
-body {margin: 0;padding: 0;display: flex;
-  justify-content: center;align-items: center;
-  height: 100vh; overflow: hidden;
-  background-color: black;color: white;font-family: Arial, sans-serif;}
+body {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: black;
+  color: white;
+  font-family: Arial, sans-serif;
+  overflow: auto; /* allow scrolling when settings are visible */
+}
+body.loaded {overflow: hidden;} /* hide scroll once loaded */
+
 #container {position: relative; width: 100%; height: 100%;}
-iframe {position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: none; pointer-events: none;}
-iframe.top {pointer-events: auto; z-index: 10; mix-blend-mode: plus-darker;}
+iframe {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border: none;
+  pointer-events: none;
+}
+iframe.top {pointer-events: auto; z-index: 10;}
+
 #enter-url{
   position: absolute;
   inset: 0;
@@ -56,17 +73,19 @@ iframe.top {pointer-events: auto; z-index: 10; mix-blend-mode: plus-darker;}
   gap: 1rem;
   margin: .5rem 0;
 }
+.buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
 .opacity-label, .blend-label {
   display: flex;
   align-items: center;
   font-size: 0.9rem;
   white-space: nowrap;
-  flex: 0 0 auto;
 }
-.opacity-slider {
-  width: 100px;
-  margin-left: 0.5rem;
-}
+.opacity-slider {width: 100px; margin-left: 0.5rem;}
 .opacity-num {
   width: 50px;
   margin-left: 0.5rem;
@@ -77,7 +96,7 @@ iframe.top {pointer-events: auto; z-index: 10; mix-blend-mode: plus-darker;}
   color: #fff;
   text-align: center;
 }
-.opacity-num:hover { background: #000; border-color: #4300ed; }
+.opacity-num:hover {background: #000; border-color: #4300ed;}
 select {
   margin-left: 0.5rem;
   padding: 0.3rem;
@@ -86,7 +105,7 @@ select {
   border-radius: 0.3rem;
   color: #fff;
 }
-select:hover { background: #000; border-color: #4300ed; }
+select:hover {background: #000; border-color: #4300ed;}
 a{color:#888;font-size:.8rem;}
 a:hover{color:#aaa}
 </style>
@@ -97,96 +116,153 @@ a:hover{color:#aaa}
 </div>
 <div id="enter-url">
   No URL provided. Enter a YouTube or other embeddable URL below:<br><br>
-  <div class="url-row">
-    <input type="text" id="url-input" placeholder="https://youtu.be/..." autofocus>
-    <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="1" id="op-bottom">
-    <input type="number" class="opacity-num" min="0" max="1" step="0.01" value="1" id="op-bottom-num"></label>
-  </div>
-  <div class="url-row">
-    <input type="text" id="url2-input" placeholder="https://youtu.be/... (optional overlay)">
-    <label class="opacity-label">Opacity: <input type="range" class="opacity-slider" min="0" max="1" step="0.01" value="0.65" id="op-top">
-    <input type="number" class="opacity-num" min="0" max="1" step="0.01" value="0.65" id="op-top-num"></label></div><div class="url-row">
-    <label class="blend-label">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Blend Mode: <select id="blend-select">
-      <option value="normal">Normal</option>
-      <option value="multiply">Multiply</option>
-      <option value="screen">Screen</option>
-      <option value="overlay">Overlay</option>
-      <option value="darken">Darken</option>
-      <option value="lighten">Lighten</option>
-      <option value="color-dodge">Color Dodge</option>
-      <option value="color-burn">Color Burn</option>
-      <option value="hard-light">Hard Light</option>
-      <option value="soft-light">Soft Light</option>
-      <option value="difference">Difference</option>
-      <option value="exclusion">Exclusion</option>
-      <option value="hue">Hue</option>
-      <option value="saturation">Saturation</option>
-      <option value="color">Color</option>
-      <option value="luminosity">Luminosity</option>
-      <option value="plus-darker" selected>Plus Darker</option>
-      <option value="plus-lighter">Plus Lighter</option>
-    </select></label>
-  </div>
-  <button onclick="newEmbedUrl()">Load</button><br><br>
+  <div id="url-rows"></div>
+  <div class="buttons">
+    <button id="add-url">Add Another Url</button>
+    <button onclick="newEmbedUrl()">Load</button>
+  </div><br>
   <a href="https://github.com/Embed-Proxy/embed-proxy.github.io" target="_blank">Embed Proxy on GitHub</a>
 </div>
 <script>
-const inputUrl = document.getElementById('url-input');
-const inputUrl2 = document.getElementById('url2-input');
-const opBottom = document.getElementById('op-bottom');
-const opBottomNum = document.getElementById('op-bottom-num');
-const opTop = document.getElementById('op-top');
-const opTopNum = document.getElementById('op-top-num');
-const blendSelect = document.getElementById('blend-select');
+const pageParams = new URLSearchParams(window.location.search);
+let rowCount = 0;
+let hasOverlay = false;
 
-opBottom.oninput = () => opBottomNum.value = opBottom.value;
-opBottomNum.oninput = () => opBottom.value = opBottomNum.value;
-opTop.oninput = () => opTopNum.value = opTop.value;
-opTopNum.oninput = () => opTop.value = opTopNum.value;
+function addRow(url = '', op = 1, blend = 'plus-darker', isOverlay = false) {
+  rowCount++;
+  const row = document.createElement('div');
+  row.className = 'url-row';
+  row.dataset.index = rowCount;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = isOverlay ? 'https://youtu.be/... (optional overlay)' : 'https://youtu.be/...';
+  input.value = url;
+  if (rowCount === 1) input.autofocus = true;
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });
+  row.appendChild(input);
+
+  // Only show opacity controls if it's an overlay OR if we already have an overlay (meaning base opacity is now adjustable)
+  if (isOverlay || hasOverlay) {
+    const opLabel = document.createElement('label');
+    opLabel.className = 'opacity-label';
+    opLabel.innerHTML = 'Opacity: ';
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.className = 'opacity-slider';
+    slider.min = 0; slider.max = 1; slider.step = 0.01; slider.value = op;
+    opLabel.appendChild(slider);
+    const num = document.createElement('input');
+    num.type = 'number';
+    num.className = 'opacity-num';
+    num.min = 0; num.max = 1; num.step = 0.01; num.value = op;
+    opLabel.appendChild(num);
+    row.appendChild(opLabel);
+
+    slider.oninput = () => num.value = slider.value;
+    num.oninput = () => slider.value = num.value;
+  }
+
+  if (isOverlay) {
+    hasOverlay = true;
+    // Now that an overlay exists, show opacity on the first row if it wasn't already
+    const firstRow = document.querySelector('.url-row[data-index="1"]');
+    if (firstRow && !firstRow.querySelector('.opacity-label')) {
+      const opLabel = document.createElement('label');
+      opLabel.className = 'opacity-label';
+      opLabel.innerHTML = 'Opacity: ';
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.className = 'opacity-slider';
+      slider.min = 0; slider.max = 1; slider.step = 0.01; slider.value = 1;
+      opLabel.appendChild(slider);
+      const num = document.createElement('input');
+      num.type = 'number';
+      num.className = 'opacity-num';
+      num.min = 0; num.max = 1; num.step = 0.01; num.value = 1;
+      opLabel.appendChild(num);
+      firstRow.appendChild(opLabel);
+      slider.oninput = () => num.value = slider.value;
+      num.oninput = () => slider.value = num.value;
+    }
+
+    const blendLabel = document.createElement('label');
+    blendLabel.className = 'blend-label';
+    blendLabel.innerHTML = 'Blend Mode: ';
+    const select = document.createElement('select');
+    const opts = ['normal','multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference','exclusion','hue','saturation','color','luminosity','plus-darker','plus-lighter'];
+    opts.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt;
+      option.text = opt.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      if (opt === blend) option.selected = true;
+      select.appendChild(option);
+    });
+    blendLabel.appendChild(select);
+    row.appendChild(blendLabel);
+  }
+
+  document.getElementById('url-rows').appendChild(row);
+}
 
 function newEmbedUrl() {
-  const val1 = inputUrl.value.trim();
-  const val2 = inputUrl2.value.trim();
-  if (val1) {
-    const search = '?url=' + encodeURIComponent(val1) +
-      (val2 ? '&url2=' + encodeURIComponent(val2) : '') +
-      '&op1=' + opBottom.value +
-      '&op2=' + opTop.value +
-      '&blend=' + blendSelect.value;
-    location.search = search;
-  }
+  const rows = document.querySelectorAll('#url-rows .url-row');
+  let search = '';
+  let j = 1;
+  rows.forEach(row => {
+    const urlInput = row.querySelector('input[type="text"]');
+    const val = urlInput.value.trim();
+    if (val) {
+      search += (j === 1 ? '?' : '&') + 'url' + j + '=' + encodeURIComponent(val);
+      const opSlider = row.querySelector('.opacity-slider');
+      if (opSlider) search += '&op' + j + '=' + opSlider.value;
+      const blendSelect = row.querySelector('select');
+      if (blendSelect) search += '&blend' + j + '=' + blendSelect.value;
+      j++;
+    }
+  });
+  if (search) location.search = search;
 }
-const pageParams = new URLSearchParams(window.location.search);
-const url1 = pageParams.get('url');
-const url2 = pageParams.get('url2');
-const savedOp1 = pageParams.get('op1') || '1';
-const savedOp2 = pageParams.get('op2') || '0.65';
-const savedBlend = pageParams.get('blend') || 'plus-darker';
-if (!url1) {
+
+if (!pageParams.get('url1')) {
   document.getElementById('enter-url').style.display = 'block';
-  inputUrl.focus();
-  inputUrl.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });
-  inputUrl2.addEventListener('keydown', e => { if (e.key === 'Enter') newEmbedUrl(); });
-  opBottom.value = savedOp1;
-  opBottomNum.value = savedOp1;
-  opTop.value = savedOp2;
-  opTopNum.value = savedOp2;
-  blendSelect.value = savedBlend;
+  addRow('', 1, '', false); // first row, no opacity yet
+  document.getElementById('add-url').onclick = () => addRow('', 0.65, 'plus-darker', true);
 } else {
   document.getElementById('enter-url').style.display = 'none';
-  const bottom = document.getElementById('bottom-iframe');
-  bottom.src = getEmbedSrc(url1);
-  bottom.style.opacity = savedOp1;
-  if (url2) {
-    const top = bottom.cloneNode();
-    top.id = 'top-iframe';
-    top.classList.add('top');
-    document.getElementById('container').appendChild(top);
-    top.src = getEmbedSrc(url2);
-    top.style.opacity = savedOp2;
-    top.style.mixBlendMode = savedBlend;
+  document.body.classList.add('loaded'); // hide overflow
+
+  let i = 1;
+  while (true) {
+    const url = pageParams.get('url' + i);
+    if (!url) break;
+    const op = pageParams.get('op' + i) || (i === 1 ? '1' : '0.65');
+    const blend = i > 1 ? (pageParams.get('blend' + i) || 'plus-darker') : '';
+
+    let iframe;
+    if (i === 1) {
+      iframe = document.getElementById('bottom-iframe');
+    } else {
+      iframe = document.getElementById('bottom-iframe').cloneNode();
+      iframe.id = 'iframe-' + i;
+      iframe.classList.add('top');
+      document.getElementById('container').appendChild(iframe);
+    }
+    iframe.src = getEmbedSrc(url);
+    iframe.style.opacity = op;
+    iframe.style.zIndex = i;
+    if (i > 1) iframe.style.mixBlendMode = blend;
+
+    // topmost iframe gets pointer events
+    iframe.style.pointerEvents = 'none';
+    i++;
   }
+  // enable pointer events on the very top layer
+  const topIframe = document.querySelector('iframe.top') || document.getElementById('bottom-iframe');
+  if (topIframe) topIframe.style.pointerEvents = 'auto';
 }
+
+// embed parsing logic unchanged
 function isPlaylistID(id) { return (id || '').split('?')[0].length > 11; }
 function getEmbedSrc(input) {
   if (!input) return '';
