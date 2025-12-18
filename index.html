@@ -108,6 +108,29 @@ select {
 select:hover {background: #000; border-color: #4300ed;}
 a{color:#888;font-size:.8rem;}
 a:hover{color:#aaa}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+  #enter-url {
+    min-width: 90vw;
+    padding: 1rem;
+  }
+  .url-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  .opacity-label, .blend-label {
+    justify-content: flex-start;
+    white-space: normal;
+  }
+  .opacity-slider {width: 100%;}
+  .opacity-num {width: auto;}
+  .buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
 </style>
 </head>
 <body>
